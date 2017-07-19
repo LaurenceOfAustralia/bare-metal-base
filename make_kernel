@@ -1,0 +1,65 @@
+#!/bin/sh
+
+ASM="nasm -felf32"
+CC="i386-elf-gcc"
+QEMU="qemu-system-x86_64"
+
+mkdir -p build
+
+build () {
+  echo "Building the kernel..."
+
+  # If there are files delete them
+  if [ -n "$(ls -A build)" ]
+  then
+    rm -r ./build/*
+  fi
+
+  #cp -r ./* ./build
+
+  # Do the stuff
+  $ASM ./kernel.asm -o ./build/boot.o # Assemble
+  $CC -c ./kernel.c -o ./build/kernel.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra # Compile
+  $CC -T ./linker.ld -o ./build/kernel.bin -ffreestanding -O2 -nostdlib ./build/boot.o ./build/kernel.o -lgcc # Link
+
+  # Build the iso
+  mkdir -p ./build/isodir/boot/grub
+  cp ./build/kernel.bin ./build/isodir/boot/kernel.bin
+  cp ./grub.cfg ./build/isodir/boot/grub/grub.cfg
+  vagrant ssh -c 'cd /vagrant/build && grub-mkrescue -o kernel.iso isodir '
+}
+
+run () {
+  build
+  echo "Starting qemu..."
+  $QEMU -cdrom ./build/kernel.iso
+}
+
+clean () {
+  rm -rv ./build/*
+}
+
+if [ $# -eq 0 ]
+then
+  echo "No args given, building the kernel.."
+  build
+  exit
+fi
+
+if [ $1 == "build" ]
+then
+  build
+  exit
+fi
+
+if [ $1 == "run" ]
+then
+  run
+  exit
+fi
+
+if [ $1 == "clean" ]
+then
+  clean
+  exit
+fi

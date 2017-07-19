@@ -1,0 +1,1 @@
+This is a very simple base for my bare metal projects. Lots of it is from the osdev wiki.
